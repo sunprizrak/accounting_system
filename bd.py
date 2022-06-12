@@ -2,20 +2,24 @@ import sqlite3
 import os.path
 
 
-class Student:
+class Person:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     db_path = os.path.join(BASE_DIR, 'accountant.db')
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
     def __init__(self):
-        self.cursor.execute(f"CREATE TABLE IF NOT EXISTS {self.__class__.__name__} ({self.__class__.__name__.lower()}_id INTEGER PRIMARY KEY AUTOINCREMENT, first_name TEXT NOT NULL, middle_name TEXT, last_name TEXT NOT NULL)")
+        self.cursor.execute(
+            f"CREATE TABLE IF NOT EXISTS {self.__class__.__name__} ({self.__class__.__name__.lower()}_id INTEGER PRIMARY KEY AUTOINCREMENT, first_name TEXT NOT NULL, middle_name TEXT, last_name TEXT NOT NULL)")
 
     def create(self, name):
         if len(name.split()) == 3:
             f, m, l, = list(map(str.capitalize, name.split()))
-            if len(self.cursor.execute(f"SELECT ({self.__class__.__name__.lower()}_id) FROM {self.__class__.__name__} WHERE first_name || middle_name || last_name == '{''.join(list(map(str.capitalize, name.split())))}' ").fetchall()) == 0:
-                self.cursor.execute(f"INSERT OR IGNORE INTO {self.__class__.__name__} (first_name, middle_name, last_name) VALUES (?, ?, ?)", (f, m, l))
+            if len(self.cursor.execute(
+                    f"SELECT ({self.__class__.__name__.lower()}_id) FROM {self.__class__.__name__} WHERE first_name || middle_name || last_name == '{''.join(list(map(str.capitalize, name.split())))}' ").fetchall()) == 0:
+                self.cursor.execute(
+                    f"INSERT OR IGNORE INTO {self.__class__.__name__} (first_name, middle_name, last_name) VALUES (?, ?, ?)",
+                    (f, m, l))
                 print(f"Пользователь {name} добавлен")
                 return self.conn.commit()
             else:
@@ -25,9 +29,11 @@ class Student:
 
     def read(self, name=None):
         if name:
-            table = table = self.cursor.execute(f"SELECT first_name, middle_name, last_name, {self.__class__.__name__.lower()}_id FROM {self.__class__.__name__} WHERE first_name || middle_name || last_name == '{''.join(list(map(str.capitalize, name.split())))}'").fetchall()
+            table = table = self.cursor.execute(
+                f"SELECT first_name, middle_name, last_name, {self.__class__.__name__.lower()}_id FROM {self.__class__.__name__} WHERE first_name || middle_name || last_name == '{''.join(list(map(str.capitalize, name.split())))}'").fetchall()
         else:
-            table = self.cursor.execute(f"SELECT first_name, middle_name, last_name, {self.__class__.__name__.lower()}_id FROM {self.__class__.__name__}").fetchall()
+            table = self.cursor.execute(
+                f"SELECT first_name, middle_name, last_name, {self.__class__.__name__.lower()}_id FROM {self.__class__.__name__}").fetchall()
 
         count = 1
         for el in table:
@@ -37,9 +43,13 @@ class Student:
     def update(self, id_record, name):
         if len(name.split()) == 3:
             f, m, l, = list(map(str.capitalize, name.split()))
-            self.cursor.execute(f"UPDATE {self.__class__.__name__} SET first_name = '{f}', middle_name = '{m}', last_name = '{l}'  WHERE {self.__class__.__name__.lower()}_id == {id_record} ")
+            self.cursor.execute(
+                f"UPDATE {self.__class__.__name__} SET first_name = '{f}', middle_name = '{m}', last_name = '{l}'  WHERE {self.__class__.__name__.lower()}_id == {id_record} ")
             print(f"Запись с id:{id_record} обновлена")
             return self.conn.commit()
+
+
+class Student(Person):
 
     def delete(self, id_record):
         student_id = self.cursor.execute(f"SELECT {self.__class__.__name__.lower()}_id FROM {self.__class__.__name__} WHERE {self.__class__.__name__.lower()}_id == {id_record}").fetchall()
@@ -54,6 +64,23 @@ class Student:
             return self.conn.commit()
         else:
             print(f'Пользователя с {id_record} нет в БД')
+
+
+class Teacher(Person):
+
+    def delete(self, id_record):
+        teacher_id = self.cursor.execute(f"SELECT {self.__class__.__name__.lower()}_id FROM {self.__class__.__name__} WHERE {self.__class__.__name__.lower()}_id == {id_record}").fetchall()
+        subject_id = self.cursor.execute(f"SELECT subject_id FROM Subject WHERE teacher_fk == {id_record}").fetchall()
+        if len(subject_id) > 0:
+            pt = Subject()
+            pt.delete(subject_id[0][0])
+
+        if len(teacher_id) > 0:
+            self.cursor.execute(f"DELETE FROM {self.__class__.__name__} WHERE {self.__class__.__name__.lower()}_id == {id_record}")
+            print(f'Пользователь с id:{id_record} удалён')
+            return self.conn.commit()
+        else:
+            return f'Пользователя с {id_record} нет в БД'
 
 
 class StudGroup:
@@ -102,23 +129,6 @@ class StudGroup:
     def delete(self, id_record):
         self.cursor.execute(f"DELETE FROM {self.__class__.__name__} WHERE {self.__class__.__name__.lower()}_id == {id_record}")
         return self.conn.commit()
-
-
-class Teacher(Student):
-
-    def delete(self, id_record):
-        teacher_id = self.cursor.execute(f"SELECT {self.__class__.__name__.lower()}_id FROM {self.__class__.__name__} WHERE {self.__class__.__name__.lower()}_id == {id_record}").fetchall()
-        subject_id = self.cursor.execute(f"SELECT subject_id FROM Subject WHERE teacher_fk == {id_record}").fetchall()
-        if len(subject_id) > 0:
-            pt = Subject()
-            pt.delete(subject_id[0][0])
-
-        if len(teacher_id) > 0:
-            self.cursor.execute(f"DELETE FROM {self.__class__.__name__} WHERE {self.__class__.__name__.lower()}_id == {id_record}")
-            print(f'Пользователь с id:{id_record} удалён')
-            return self.conn.commit()
-        else:
-            return f'Пользователя с {id_record} нет в БД'
 
 
 class Subject:
